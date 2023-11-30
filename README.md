@@ -307,43 +307,42 @@ _mysql> alter table ticket add foreign key (r_id) references route(r_id);_
 
 SET B
 
-1)select s.sid, s.tid, s.rid, s.departure_time, s.arrival_time, s.date, r.driver, q.st_name, q.contact_no   
-from schedule s, route r, staff q   
-where s.rid=r.rid and q.staff_id=r.driver   
-and date = '2023/10/10';
+Q.1  
+select schedule.* , staff.*   
+from schedule,staff  
+where schedule.driver = staff.staff_id &  
+schedule.date = '2023-10-10';
 
-2)SELECT T.tid, T.mileage, M.date AS last_service_date,  
-COUNT(S.sid) AS total_trips  
-FROM Train T  
-LEFT JOIN Maintenance M ON T.tid = M.tid  
-LEFT JOIN Schedule S ON T.tid = S.tid  
-WHERE T.mileage BETWEEN 4000 AND 4999  
-AND M.date <= '2023-09-30' AND M.date >= '2023-09-01'  
-GROUP BY T.tid, T.mileage, M.date;
+Q.2  
+select t.* , g.date,count(s.sid)    
+from train t, goes_through g, schedule s   
+where t.tid = g.tid & t.tid = s.tid   
+and t.milage between 4000 and 4999  
+and s.date = ‘2023/10/10’  
+group by t.tid, t.milage,g.date;
 
+Q.3  
+select ta.* , r.* ,  
+count(b.final_price) as confirm_book,  
+count(b.ticket_id) as total_book,  
+count(b.final_price)/count (b.ticket_id) as book_percentage  
+from travel_agent ta, route r, booking b, ticket t  
+where ta.ta_id = b.ta_id  
+and b.ticket_id = t.ticket_id  
+and t.r_id = r._r_id  
+and t.date between ‘2023-10-01’ and ‘2023-10-31’  
+group by ta.ta_id, r.r_id  
+order by book_percentage desc;
 
-3)SELECT TA.ta_id, TA.ta_name, R.rid, R.r_name,  
-SUM(CASE WHEN B.ticket_id IS NOT NULL THEN 1 ELSE 0 END) * 100 / COUNT(B.ticket_id) AS PercentageConfirmedBookings  
-FROM travel_agent TA  
-INNER JOIN booking B ON TA.ta_id = B.ta_id  
-INNER JOIN schedule S ON B.sid = S.sid  
-INNER JOIN route R ON S.rid = R.rid  
-WHERE B.date BETWEEN '2023-10-01' AND '2023-10-31'  
-GROUP BY TA.ta_id, R.rid  
-ORDER BY PercentageConfirmedBookings DESC;
+Q.4  
+select * from route   
+where r_id in (select r_id from ticket where ticket_id in (select ticket_id from booking where ta_id=’null’));
 
-4)SELECT R.*,  
-COUNT(CASE WHEN B.ta_id IS NULL THEN 1 END) AS NonAgentBookings,  
-COUNT(*) AS TotalBookings  
-FROM Route R  
-INNER JOIN Schedule S ON R.rid = S.rid  
-LEFT JOIN Booking B ON S.sid = B.sid  
-GROUP BY R.rid  
-HAVING NonAgentBookings > TotalBookings / 2;
-
-5)SELECT TA.ta_id, TA.ta_name,TA.commission  
-FROM TravelAgent TAINNER JOIN Booking B ON TA.ta_id = B.ta_id  
-WHERE B.date BETWEEN '2023-09-01' AND '2023-09-30'  
-GROUP BY TA.ta_id, TA.ta_name, TA.commission  
-ORDER BY TA.commission DESC  
-LIMIT 1;
+Q.5  
+select ta.* , sum(b.discount) as total_commission  
+from travel_agent ta, booking b, ticket t  
+where ta.ta_id = b.ta_id and b.ticket_id = t.ticket.id   
+and date between ‘2023/09/01’ and ‘2023/09/30’   
+group by ta.ta_id  
+order by total_commission desc  
+limit 1;
